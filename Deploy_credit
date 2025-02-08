@@ -1,0 +1,83 @@
+# Carregar modelo previamente treinado
+modelo <- readRDS("modelo_credito.rds")
+library(shiny)
+
+ui <- fluidPage(
+  titlePanel("Predição de Risco de Crédito"),
+  sidebarLayout(
+    sidebarPanel(
+      selectInput("checking_balance", "Saldo na Conta Corrente:", 
+                  choices = c("< 0 DM", "> 200 DM", "1 - 200 DM", "nenhuma")),
+      numericInput("months_loan_duration", "Duração do Empréstimo (meses):", value = 12, min = 1, max = 100),
+      selectInput("credit_history", "Histórico de Crédito:", 
+                  choices = c("critical", "good", "poor", "very good", "unknown")),
+      selectInput("purpose", "Finalidade do Empréstimo:", 
+                  choices = c("business", "car", "education", "furniture", "renovation", "other")),
+      numericInput("amount", "Valor do Empréstimo:", value = 5000, min = 0, max = 100000),
+      selectInput("savings_balance", "Saldo Poupança:", 
+                  choices = c("< 100 DM", "> 1000 DM", "100 - 500 DM", "500 - 1000 DM", "unknown")),
+      selectInput("employment_duration", "Tempo de Emprego:", 
+                  choices = c("< 1 year", "> 7 years", "1 - 4 years", "4 - 7 years", "unknown")),
+      numericInput("percent_of_income", "Porcentagem da Renda Comprometida (%):", value = 2, min = 0, max = 100),
+      numericInput("years_at_residence", "Anos na Residência Atual:", value = 3, min = 0, max = 50),
+      numericInput("age", "Idade:", value = 35, min = 18, max = 100),
+      selectInput("other_credit", "Outro Crédito Existente:", 
+                  choices = c("bank", "none", "store")),
+      selectInput("housing", "Tipo de Moradia:", 
+                  choices = c("other", "own", "rent")),
+      numericInput("existing_loans_count", "Número de Empréstimos Existentes:", value = 1, min = 0, max = 10),
+      selectInput("job", "Tipo de Trabalho:", 
+                  choices = c("management", "skilled", "unskilled", "unknown")),
+      numericInput("dependents", "Número de Dependentes:", value = 1, min = 0, max = 10),
+      selectInput("phone", "Possui Telefone?:", 
+                  choices = c("no", "yes")),
+      actionButton("predict", "Rodar Modelo")
+    ),
+    mainPanel(
+      textOutput("resultado")
+    )
+  )
+)
+
+server <- function(input, output) {
+  observeEvent(input$predict, {
+    novos_dados <- data.frame(
+      checking_balance = factor(input$checking_balance, 
+                                levels = c("< 0 DM", "> 200 DM", "1 - 200 DM", "nenhuma")),
+      months_loan_duration = as.numeric(input$months_loan_duration),
+      credit_history = factor(input$credit_history, 
+                              levels = c("critical", "good", "poor", "very good", "unknown")),
+      purpose = factor(input$purpose, 
+                       levels = c("business", "car", "education", "furniture", "renovation", "other")),
+      amount = as.numeric(input$amount),
+      savings_balance = factor(input$savings_balance, 
+                               levels = c("< 100 DM", "> 1000 DM", "100 - 500 DM", "500 - 1000 DM", "unknown")),
+      employment_duration = factor(input$employment_duration, 
+                                   levels = c("< 1 year", "> 7 years", "1 - 4 years", "4 - 7 years", "unknown")),
+      percent_of_income = as.numeric(input$percent_of_income),
+      years_at_residence = as.numeric(input$years_at_residence),
+      age = as.numeric(input$age),
+      other_credit = factor(input$other_credit, 
+                            levels = c("bank", "none", "store")),
+      housing = factor(input$housing, 
+                       levels = c("other", "own", "rent")),
+      existing_loans_count = as.numeric(input$existing_loans_count),
+      job = factor(input$job, 
+                   levels = c("management", "skilled", "unskilled", "unknown")),
+      dependents = as.numeric(input$dependents),
+      phone = factor(input$phone, levels = c("no", "yes"))
+    )
+    
+    modelo <- readRDS("modelo_credito.rds")
+    
+    if (inherits(modelo, "C5.0")) {
+      predicao <- predict(modelo, novos_dados, type = "class")
+    } else {
+      predicao <- predict(modelo, novos_dados)
+    }
+    
+    output$resultado <- renderText({ paste("Resultado da Predição:", predicao) })
+  })
+}
+
+shinyApp(ui = ui, server = server)
